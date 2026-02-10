@@ -1,5 +1,31 @@
-const Sequelize=require("sequelize");
+const mongodb = require("mongodb");
+const MongoClient = mongodb.MongoClient;
+//the type to enable suggestion
+/** @type {import('mongodb').Db} */
 
-const sequelize=new Sequelize('node-backend','root','qwsdcv123',{dialect:'mysql',host:'localhost'});
+let _db;
 
-module.exports=sequelize;
+const mongoConnect = (callback) => {
+  //cb is func we pass to excute when the result ready
+  MongoClient.connect(
+    "mongodb+srv://HananBiazid:Qwsdcv123.@cluster0.g55jnzu.mongodb.net/shop?appName=Cluster0", //db created automatically on first data insert even if db not was created manually
+  )
+    .then((client) => {
+      console.log("Connected to MongoDB");
+      _db = client.db();
+      callback();
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
+
+const getDb = () => {
+  if (_db) {
+    return _db;
+  }
+  throw new Error("No database found!");
+};
+
+exports.mongoConnect = mongoConnect;
+exports.getDb = getDb;

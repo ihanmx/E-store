@@ -23,6 +23,7 @@
                         </div>
                         <div class="card__actions">
                             <!-- inside for loop you have to pass var to includes -->
+                             <a href="/product/<%=product._id%>" class="btn">Details </a>
           <%-include('../includes/add-to-cart.ejs',{product:product}) %>
                         </div>
                     </article>

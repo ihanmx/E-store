@@ -1,5 +1,7 @@
+require("dotenv").config();
 const mongodb = require("mongodb");
 const MongoClient = mongodb.MongoClient;
+
 //the type to enable suggestion
 /** @type {import('mongodb').Db} */
 
@@ -8,7 +10,7 @@ let _db;
 const mongoConnect = (callback) => {
   //cb is func we pass to excute when the result ready
   MongoClient.connect(
-    "mongodb+srv://HananBiazid:Qwsdcv123.@cluster0.g55jnzu.mongodb.net/shop?appName=Cluster0", //db created automatically on first data insert even if db not was created manually
+    process.env.MONGO_URI, //db created automatically on first data insert even if db not was created manually
   )
     .then((client) => {
       console.log("Connected to MongoDB");

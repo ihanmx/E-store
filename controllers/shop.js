@@ -1,7 +1,9 @@
 const Product = require("../models/product");
+const Order = require("../models/order");
+const product = require("../models/product");
 
 exports.getProducts = (req, res, next) => {
-  Product.fetchAll()
+  Product.find()
     .then((products) => {
       //rows stands for resault[0]
       res.render("shop/product-list", {
@@ -15,18 +17,8 @@ exports.getProducts = (req, res, next) => {
 
 exports.getProduct = (req, res, next) => {
   const prodId = req.params.productId;
-  // Product.findAll({ where: { id: prodId } })
-  //   .then((products) => {
-  //     res.render("shop/product-detail", {
-  //       product: products[0],
-  //       pageTitle: products[0].title,
-  //       path: "/products",
-  //     });
-  //   })
-  //   .catch((err) => {
-  //     console.log(err);
-  //   });
-  Product.findById(prodId)
+
+  Product.findById(prodId) //findBy Id provided by mongoose and it converts ids to mongoo obj id automatically
     .then((product) => {
       res.render("shop/product-detail", {
         product: product,
@@ -40,7 +32,7 @@ exports.getProduct = (req, res, next) => {
 };
 
 exports.getIndex = (req, res, next) => {
-  Product.fetchAll()
+  Product.find()
     .then((products) => {
       //rows stands for resault[0]
       res.render("shop/index", {
@@ -54,8 +46,11 @@ exports.getIndex = (req, res, next) => {
 
 exports.getCart = (req, res, next) => {
   req.user
-    .getCart()
-    .then((products) => {
+    .populate("cart.items.productId")
+
+    .then((user) => {
+      console.log(user.cart.items);
+      const products = user.cart.items;
       res.render("shop/cart", {
         path: "/cart",
         pageTitle: "Your Cart",
@@ -65,28 +60,6 @@ exports.getCart = (req, res, next) => {
     .catch((err) => {
       console.log(err);
     });
-
-  // Cart.getCart((cart) => {
-  //   Product.fetchAll((products) => {
-  //     const cartProducts = [];
-  //     for (product of products) {
-  //       const cartProductData = cart.products.find(
-  //         (prod) => prod.id === product.id
-  //       );
-  //       if (cartProductData) {
-  //         cartProducts.push({
-  //           productData: product,
-  //           quantity: cartProductData.quantity,
-  //         });
-  //       }
-  //     }
-  //     res.render("shop/cart", {
-  //       path: "/cart",
-  //       pageTitle: "Your Cart",
-  //       products: cartProducts,
-  //     });
-  //   });
-  // });
 };
 
 exports.postCart = (req, res, next) => {
@@ -151,7 +124,7 @@ exports.postCartDeleteProduct = (req, res, next) => {
   const productId = req.body.productId;
 
   req.user
-    .deleteItemFromCart(productId)
+    .removeFromCart(productId)
 
     .then(() => {
       res.redirect("/cart");
@@ -161,10 +134,8 @@ exports.postCartDeleteProduct = (req, res, next) => {
     });
 };
 exports.getOrders = (req, res, next) => {
-  req.user
-    .getOrders()
+  Order.find({ "user.userId": req.user._id })
     .then((orders) => {
-      //we have to include products to get them along with orders in the ejs
       res.render("shop/orders", {
         path: "/orders",
         pageTitle: "Your Orders",
@@ -172,18 +143,35 @@ exports.getOrders = (req, res, next) => {
       });
     })
     .catch((err) => {
-      console.log(err);
+      next(err);
     });
 };
 
 exports.postOrder = (req, res, next) => {
-  req.user
-    .addOrder()
-    .then(() => {
-      res.redirect("/orders");
+  return req.user
+    .populate("cart.items.productId")
+    .then((user) => {
+      const products = user.cart.items.map((i) => {
+        return { quantity: i.quantity, product: { ...i.productId._doc } };
+      });
+      const order = new Order({
+        user: {
+          name: req.user.name,
+          userId: req.user,
+        },
+        products: products,
+      });
+      return order
+        .save()
+        .then(() => {
+          return req.user.clearCart();
+        })
+        .then(() => {
+          res.redirect("/orders");
+        });
     })
     .catch((err) => {
-      console.log(err);
+      next(err);
     });
 };
 

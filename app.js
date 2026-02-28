@@ -4,25 +4,23 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const User = require("./models/user");
 const errorController = require("./controllers/error");
+const adminRoutes = require("./routes/admin");
+const shopRoutes = require("./routes/shop");
+const authRoutes = require("./routes/auth");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
-
+const flash = require("connect-flash");
 const app = express();
 const store = new MongoDBStore({
   uri: process.env.MONGO_URI,
   collection: "sessions",
 });
-
 store.on("error", (err) => console.log("Session store error:", err));
-
 app.set("view engine", "ejs");
 app.set("views", "views");
 
-const adminRoutes = require("./routes/admin");
-const shopRoutes = require("./routes/shop");
-const authRoutes = require("./routes/auth");
-
+//middlewares
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(
@@ -33,6 +31,7 @@ app.use(
     store: store,
   }),
 );
+app.use(flash());
 app.use((req, res, next) => {
   if (!req.session.user) {
     return next();
@@ -46,11 +45,14 @@ app.use((req, res, next) => {
       console.log(err);
     });
 });
-
+//routes
+app.use((req, res, next) => {
+  res.locals.isAuthenticated = req.session.isLoggedIn;
+  next();
+});
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
-
 app.use(errorController.get404);
 
 // new User({...}) only creates a JavaScript object in memory — it does not write anything to the database.
@@ -59,20 +61,8 @@ app.use(errorController.get404);
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(async (result) => {
+  .then((result) => {
     console.log("server is running on port 3000");
-    User.find().then((users) => {
-      if (users.length === 0) {
-        //because find always return array even if empty
-        const user = new User({
-          name: "Hanan",
-          email: "hanan@test.com",
-          cart: { items: [] },
-        });
-        user.save();
-      }
-    });
-
     app.listen(3000);
   })
   .catch((err) => console.log(err));

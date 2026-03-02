@@ -48,6 +48,7 @@ app.use((req, res, next) => {
 //routes
 app.use((req, res, next) => {
   res.locals.isAuthenticated = req.session.isLoggedIn;
+
   next();
 });
 app.use("/admin", adminRoutes);

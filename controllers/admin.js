@@ -68,11 +68,18 @@ exports.postEditProduct = (req, res, next) => {
 
   Product.findById(prodId)
     .then((product) => {
+      if (product.userId.toString() !== req.session.user._id.toString()) {
+        return res.redirect("/");
+      } //authorization to edit only the products of the logged in user
       product.title = updatedTitle;
       product.price = updatedPrice;
       product.description = updatedDesc;
       product.imageUrl = updatedImageUrl;
-      return product.save(); //save automatically saves the changes on the existed prod when we call it inside callback of find
+      return product.save().then((result) => {
+        //this then relates to the save promise
+        console.log("UPDATED PRODUCT!");
+        res.redirect("/admin/products");
+      }); //save automatically saves the changes on the existed prod when we call it inside callback of find
     })
     .then((result) => {
       //this then relates to the save promise
@@ -86,10 +93,16 @@ exports.postEditProduct = (req, res, next) => {
 
 exports.postDeleteProduct = (req, res, next) => {
   const prodId = req.body.productId;
-  Product.findByIdAndDelete(prodId)
-    .then((result) => {
+
+  Product.findById(prodId)
+    .then((product) => {
+      if (product.userId.toString() !== req.session.user._id.toString()) {
+        return res.redirect("/");
+      }
+
       console.log("DESTROYED PRODUCT");
       res.redirect("/admin/products");
+      return Product.deleteOne({ _id: prodId, userId: req.session.user._id });
     })
     .catch((err) => {
       console.log(err);
@@ -99,7 +112,7 @@ exports.postDeleteProduct = (req, res, next) => {
 exports.getProducts = (req, res, next) => {
   //populate is a powerful methot that gives tou the full obj of spicific id
   //find().select() returns specigic column
-  Product.find()
+  Product.find({ userId: req.session.user._id }) //authorization to show only the products of the logged in user
     // .populate("userId")
     .then((products) => {
       console.log(products);

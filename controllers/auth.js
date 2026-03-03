@@ -2,6 +2,8 @@ const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const { validationResult } = require("express-validator");
+const path = require("path");
 
 const transporter = nodemailer.createTransport({
   host: "smtp.sendgrid.net",
@@ -24,19 +26,36 @@ exports.getLogin = (req, res, next) => {
     path: "/login",
     pageTitle: "login",
     errorMessage: message, //to retrive the eeror if exists from postLogin after redirect
+    oldInputs: { email: "", password: "" },
+    validationErrors: [],
   });
 };
 
 exports.postLogin = (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).render("auth/login", {
+      path: "/login",
+      pageTitle: "login",
+      errorMessage: errors.array()[0].msg,
+      oldInputs: { email: email, password: password },
+      validationErrors: errors.array(),
+    });
+  }
 
   User.findOne({ email: email })
     .then((user) => {
       //since we are redirected the redirect is treated as new req so to keep the err message accrosss req we need to store usign sessions through flash
       if (!user) {
-        req.flash("error", "Invalid email or password");
-        return res.redirect("/login");
+        return res.status(422).render("auth/login", {
+          path: "/login",
+          pageTitle: "login",
+          errorMessage: "Invalid email or password",
+          oldInputs: { email: email, password: password },
+          validationErrors: [], //to mark both email and password as invalid in case of wrong email or password without having to check which one is wrong
+        });
       }
       bcrypt
         .compare(password, user.password)
@@ -48,6 +67,14 @@ exports.postLogin = (req, res, next) => {
             req.session.save((err) => {
               if (err) console.log(err);
               res.redirect("/");
+            });
+          } else {
+            return res.status(422).render("auth/login", {
+              path: "/login",
+              pageTitle: "login",
+              errorMessage: "Invalid email or password",
+              oldInputs: { email: email, password: password },
+              validationErrors: [], //to mark both email and password as invalid in case of wrong email or password without having to check which one is wrong
             });
           }
         })
@@ -79,6 +106,12 @@ exports.getSignup = (req, res, next) => {
     path: "/signup",
     pageTitle: "Sign up",
     errorMessage: message,
+    oldInputs: {
+      email: "",
+      password: "",
+      confirmPassword: "", //initial values
+    },
+    validationErrors: [],
   });
 };
 
@@ -87,43 +120,48 @@ exports.postSignup = (req, res, next) => {
   const password = req.body.password;
   const confirmPassword = req.body.confirmPassword;
 
-  User.findOne({ email: email })
-    .then((userDoc) => {
-      if (userDoc) {
-        req.flash("error", "Email exists already, please pick a different one");
-        return res.redirect("/signup");
-      } else {
-        return bcrypt
-          .hash(password, 10)
-          .then((hashedpassword) => {
-            const user = new User({
-              email: email,
-              password: hashedpassword,
-              cart: { items: [] },
-            });
-            return user.save();
-          })
-          .then((result) => {
-            console.log("signup succeeded");
-            res.redirect("/login");
-            return transporter
-              .sendMail({
-                to: email,
-                from: "hanan.bayazeed56@gmail.com",
-                subject: "signup succeeded",
-                html: " <h1>You Successfully signed up!</h1>",
-              })
-              .then((info) => console.log("mail sent:", info))
-              .catch((err) => console.log("mail error:", err));
-          })
-          .catch((err) => {
-            console.log(err);
-          });
-      }
-    })
+  const errors = validationResult(req); //store errors from the check() validation in the route
+  if (!errors.isEmpty()) {
+    //422 is the status code for validation error
+    return res.status(422).render("auth/signup", {
+      path: "/signup",
+      pageTitle: "Sign up",
+      errorMessage: errors.array()[0].msg, //to get the first error message
+      oldInputs: {
+        email: email,
+        password: password,
+        confirmPassword: confirmPassword,
+      },
+      validationErrors: errors.array(), //to keep the old inputs in the form after validation error
+    });
+  }
+  //authentication if email exist is done in the route using custom() method of express validator and not here in the controller because we want to inject the error in the request and handle it in the same way as other validation errors without having to write extra code to handle it in the controller
 
+  return bcrypt
+    .hash(password, 10)
+    .then((hashedpassword) => {
+      const user = new User({
+        email: email,
+        password: hashedpassword,
+        cart: { items: [] },
+      });
+      return user.save();
+    })
+    .then((result) => {
+      console.log("signup succeeded");
+      res.redirect("/login");
+      return transporter
+        .sendMail({
+          to: email,
+          from: "hanan.bayazeed56@gmail.com",
+          subject: "signup succeeded",
+          html: " <h1>You Successfully signed up!</h1>",
+        })
+        .then((info) => console.log("mail sent:", info))
+        .catch((err) => console.log("mail error:", err));
+    })
     .catch((err) => {
-      console.error(err);
+      console.log(err);
     });
 };
 

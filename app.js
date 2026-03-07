@@ -38,11 +38,14 @@ app.use((req, res, next) => {
   }
   User.findById(req.session.user._id)
     .then((user) => {
+      if (!user) {
+        return next();
+      }
       req.user = user;
       next();
     })
     .catch((err) => {
-      console.log(err);
+      throw new Error(err); //better than concole.log(err) because it will be handled by the default error handling middleware in express and we can show a nice error page instead of crashing the app
     });
 });
 //routes
@@ -55,11 +58,17 @@ app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
 app.use(errorController.get404);
+app.use((error, req, res, next) => {
+  //special error handling middleware in express that is called when we pass an error to next() or throw an error in any of the routes or middlewares
+  res.status(error.httpStatusCode || 500).render("500", {
+    pageTitle: "Error!",
+  });
+});
 
 // new User({...}) only creates a JavaScript object in memory — it does not write anything to the database.
 
 // .save() is what actually persists that document to MongoDB. Without it, the user would exist only in your application's memory and disappear as soon as the process ends.
-
+app.use("/500", errorController.get500);
 mongoose
   .connect(process.env.MONGO_URI)
   .then((result) => {

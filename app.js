@@ -11,18 +11,47 @@ const mongoose = require("mongoose");
 const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
 const flash = require("connect-flash");
+const multer = require("multer");
 const app = express();
 const store = new MongoDBStore({
   uri: process.env.MONGO_URI,
   collection: "sessions",
 });
+
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "images");
+  },
+  filename: (req, file, cb) => {
+    cb(
+      null,
+      new Date().toISOString().replace(/:/g, "-") + "_" + file.originalname,
+    );
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === "image/png" ||
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "image/jpeg"
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
 store.on("error", (err) => console.log("Session store error:", err));
 app.set("view engine", "ejs");
 app.set("views", "views");
 
 //middlewares
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(
+  multer({ storage: fileStorage, fileFilter: fileFilter }).single("image"),
+);
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/images", express.static(path.join(__dirname, "images"))); //to serve the images statically so we can access them in the frontend using the url stored in the database without having to create a route for each image
 app.use(
   session({
     secret: "mySecret",
@@ -62,6 +91,7 @@ app.use((error, req, res, next) => {
   //special error handling middleware in express that is called when we pass an error to next() or throw an error in any of the routes or middlewares
   res.status(error.httpStatusCode || 500).render("500", {
     pageTitle: "Error!",
+    path: "/500",
   });
 });
 

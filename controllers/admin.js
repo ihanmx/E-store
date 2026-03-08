@@ -1,6 +1,7 @@
 const Product = require("../models/product");
 const { validationResult } = require("express-validator");
-
+const path = require("path");
+const fileHelper = require("../helper/file");
 exports.getAddProduct = (req, res, next) => {
   res.render("admin/edit-product", {
     pageTitle: "Add Product",
@@ -19,10 +20,25 @@ exports.getAddProduct = (req, res, next) => {
 
 exports.postAddProduct = (req, res, next) => {
   const title = req.body.title;
-  const imageUrl = req.body.imageUrl;
+  const image = req.file; //multer adds the file to the request object note :we should add enctype="multipart/form-data">
   const price = req.body.price;
   const description = req.body.description;
   const errors = validationResult(req);
+
+  if (!image) {
+    return res.status(422).render("admin/edit-product", {
+      pageTitle: "Add Product",
+      path: "/admin/add-product",
+      editing: false,
+      errorMessage: "Attached file is not an image",
+      oldInputs: {
+        title: title,
+        price: price,
+        description: description,
+      },
+      validationErrors: [],
+    });
+  }
   if (!errors.isEmpty()) {
     return res.status(422).render("admin/edit-product", {
       pageTitle: "Add Product",
@@ -33,7 +49,6 @@ exports.postAddProduct = (req, res, next) => {
         title: title,
         price: price,
         description: description,
-        imageUrl: imageUrl,
       },
       validationErrors: errors.array(),
     });
@@ -42,7 +57,7 @@ exports.postAddProduct = (req, res, next) => {
     title: title,
     price: price,
     description: description,
-    imageUrl: imageUrl,
+    imageUrl: image.path,
     userId: req.session.user._id,
   });
 
@@ -58,7 +73,6 @@ exports.postAddProduct = (req, res, next) => {
       const error = new Error(err);
       error.httpStatusCode = 500;
       return next(error);
-      s;
     });
 };
 
@@ -103,7 +117,7 @@ exports.postEditProduct = (req, res, next) => {
   const prodId = req.body.productId;
   const updatedTitle = req.body.title;
   const updatedPrice = req.body.price;
-  const updatedImageUrl = req.body.imageUrl;
+  const image = req.file;
   const updatedDesc = req.body.description;
 
   const errors = validationResult(req);
@@ -117,12 +131,12 @@ exports.postEditProduct = (req, res, next) => {
         title: updatedTitle,
         price: updatedPrice,
         description: updatedDesc,
-        imageUrl: updatedImageUrl,
       },
       validationErrors: errors.array(),
       product: { _id: prodId },
     });
   }
+  const imageUrl = image ? image.path : null;
 
   Product.findById(prodId)
     .then((product) => {
@@ -132,17 +146,14 @@ exports.postEditProduct = (req, res, next) => {
       product.title = updatedTitle;
       product.price = updatedPrice;
       product.description = updatedDesc;
-      product.imageUrl = updatedImageUrl;
+      if (image) {
+        fileHelper.deleteFile(product.imageUrl); //delete the old image from the server when updating the product with a new image
+        product.imageUrl = imageUrl;
+      }
       return product.save().then((result) => {
-        //this then relates to the save promise
         console.log("UPDATED PRODUCT!");
         res.redirect("/admin/products");
-      }); //save automatically saves the changes on the existed prod when we call it inside callback of find
-    })
-    .then((result) => {
-      //this then relates to the save promise
-      console.log("UPDATED PRODUCT!");
-      res.redirect("/admin/products");
+      });
     })
     .catch((err) => {
       console.log(err);
@@ -160,6 +171,7 @@ exports.postDeleteProduct = (req, res, next) => {
       if (product.userId.toString() !== req.session.user._id.toString()) {
         return res.redirect("/");
       }
+      fileHelper.deleteFile(product.imageUrl); //delete the image from the server when deleting the product
 
       console.log("DESTROYED PRODUCT");
       res.redirect("/admin/products");

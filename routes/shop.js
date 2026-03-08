@@ -13,5 +13,6 @@ router.get("/orders", isAuth, shopController.getOrders);
 router.get("/checkout", isAuth, shopController.getCheckout);
 router.get("/products/:productId", shopController.getProduct); //the dynamic route always in the buttom because if i have for example products/anything it would be ignored
 router.post("/create-order", isAuth, shopController.postOrder);
+router.get("/orders/:orderId", isAuth, shopController.getInvoice); //the dynamic route always in the buttom because if i have for example orders/anything it would be ignored
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const path = require("path");
+const fs = require("fs");
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -13,6 +14,8 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const flash = require("connect-flash");
 const multer = require("multer");
 const helmet = require("helmet");
+const compression = require("compression");
+const morgan = require("morgan");
 const app = express();
 const store = new MongoDBStore({
   uri: process.env.MONGO_URI,
@@ -46,9 +49,16 @@ store.on("error", (err) => console.log("Session store error:", err));
 app.set("view engine", "ejs");
 app.set("views", "views");
 
+const accessLogStream = fs.createWriteStream(
+  path.join(__dirname, "access.log"),
+  { flags: "a" },
+); //flags:'a' to append to the file instead of overwriting it
+
 //middlewares
 app.use(helmet()); //to set some security headers to protect our app from some common attacks like XSS, CSRF, etc.
+app.use(compression()); //to compress the response body to reduce the size of the response and improve the performance of the app
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(morgan("combined", { stream: accessLogStream })); //to log the requests to the console in a nice format
 app.use(
   multer({ storage: fileStorage, fileFilter: fileFilter }).single("image"),
 );

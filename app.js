@@ -12,6 +12,7 @@ const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
 const flash = require("connect-flash");
 const multer = require("multer");
+const helmet = require("helmet");
 const app = express();
 const store = new MongoDBStore({
   uri: process.env.MONGO_URI,
@@ -46,6 +47,7 @@ app.set("view engine", "ejs");
 app.set("views", "views");
 
 //middlewares
+app.use(helmet()); //to set some security headers to protect our app from some common attacks like XSS, CSRF, etc.
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(
   multer({ storage: fileStorage, fileFilter: fileFilter }).single("image"),

@@ -1,4 +1,4 @@
-# 🛒 E-Store 
+# 🛒 E-Store Backend
 
 A full-featured e-commerce web application built with Node.js and Express, progressing through multiple versions to cover core backend concepts from database integration to payment processing.
 
@@ -6,19 +6,19 @@ A full-featured e-commerce web application built with Node.js and Express, progr
 
 ## 📚 Live Concepts Covered
 
-| Version | Branch | Concept |
-|---------|--------|---------|
-| v3 | `store-v3-Sequelize` | 🗄️ SQL database with Sequelize ORM |
-| v4 | `store-v4-MongoDb` | 🍃 NoSQL with raw MongoDB driver |
-| v5 | `store-v5-mongoose` |  MongoDB with Mongoose ODM |
-| v6 | `store-v6-sessions-cookies` | 🔐 Sessions, cookies, authentication |
-| v7 | `store-v7-mailing-service` | 📧 Transactional email with Nodemailer + SendGrid |
-| v8 | `store-v8-advanced-authentication` | 🛡️ Password reset, authorization, role-based access |
-| v9 | `store-v9-validation` | ✅ Server-side input validation with express-validator |
-| v10 | `store-v10-error-handling` | 🚨 Centralized error handling middleware |
-| v11 | `store-v11-files-upload-download` | 📁 File uploads with Multer, PDF generation with PDFKit |
-| v12 | `store-v12-pagination` | 📄 Server-side pagination |
-| v13 | `store-v13-payment` | 💳 Stripe Checkout integration |
+| Version | Branch                             | Concept                                                 |
+| ------- | ---------------------------------- | ------------------------------------------------------- |
+| v3      | `store-v3-Sequelize`               | 🗄️ SQL database with Sequelize ORM                      |
+| v4      | `store-v4-MongoDb`                 | 🍃 NoSQL with raw MongoDB driver                        |
+| v5      | `store-v5-mongoose`                | MongoDB with Mongoose ODM                               |
+| v6      | `store-v6-sessions-cookies`        | 🔐 Sessions, cookies, authentication                    |
+| v7      | `store-v7-mailing-service`         | 📧 Transactional email with Nodemailer + SendGrid       |
+| v8      | `store-v8-advanced-authentication` | 🛡️ Password reset, authorization, role-based access     |
+| v9      | `store-v9-validation`              | ✅ Server-side input validation with express-validator  |
+| v10     | `store-v10-error-handling`         | 🚨 Centralized error handling middleware                |
+| v11     | `store-v11-files-upload-download`  | 📁 File uploads with Multer, PDF generation with PDFKit |
+| v12     | `store-v12-pagination`             | 📄 Server-side pagination                               |
+| v13     | `store-v13-payment`                | 💳 Stripe Checkout integration                          |
 
 ---
 
@@ -131,32 +131,39 @@ App runs at `http://localhost:3000`
 ## 🧠 Key Concepts Explained
 
 ### 🔐 Sessions & Authentication
+
 User login state is stored server-side using `express-session` with MongoDB as the session store (`connect-mongodb-session`). Passwords are hashed with `bcrypt` before saving.
 
 ### 🛡️ Authorization
+
 The `is-auth` middleware protects routes by checking `req.session.isLoggedIn`. Admin routes additionally verify that the product being edited/deleted belongs to the logged-in user.
 
 ### 📁 File Uploads
+
 `Multer` handles `multipart/form-data` requests. Files are stored to the `images/` directory using `diskStorage`. Only PNG/JPG/JPEG files pass the `fileFilter`.
 
 ### 🧾 PDF Invoices
+
 `PDFKit` streams the generated PDF simultaneously to the file system and the HTTP response, avoiding buffering the entire file in memory.
 
 ### 📄 Pagination
+
 Products are paginated using Mongoose's `.skip()` and `.limit()`. The controller passes `currentPage`, `hasNextPage`, `hasPreviousPage`, `nextPage`, `previousPage`, and `lastPage` to the view for the pagination partial.
 
 ### 💳 Stripe Checkout
+
 On checkout, a Stripe `Session` is created server-side with `line_items` built from the user's cart. The client-side Stripe.js SDK redirects the user to Stripe's hosted payment page. On success, Stripe redirects to `/checkout/success` where the order is saved and the cart is cleared.
 
 ### 🚨 Error Handling
+
 A custom error class with `httpStatusCode` is used. Errors are forwarded via `next(error)` to a centralized Express error-handling middleware that renders the appropriate error page.
 
 ---
 
 ## 💳 Stripe Test Cards
 
-| Card Number | Result |
-|-------------|--------|
+| Card Number           | Result              |
+| --------------------- | ------------------- |
 | `4242 4242 4242 4242` | ✅ Payment succeeds |
 | `4000 0000 0000 0002` | ❌ Payment declined |
 

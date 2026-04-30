@@ -2,7 +2,7 @@ const Product = require("../models/product");
 const { validationResult } = require("express-validator");
 const path = require("path");
 const fileHelper = require("../helper/file");
-const ITEMS_PER_PAGE = 1;
+const ITEMS_PER_PAGE = 3;
 exports.getAddProduct = (req, res, next) => {
   res.render("admin/edit-product", {
     pageTitle: "Add Product",
